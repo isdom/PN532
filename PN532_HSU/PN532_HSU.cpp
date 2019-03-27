@@ -2,6 +2,8 @@
 #include "PN532_HSU.h"
 #include "PN532_debug.h"
 
+const uint8_t PN532_WAKEUP[24] = {0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x03, 0xfd, 0xd4, 0x14, 0x01, 0x17, 0x00};
 
 PN532_HSU::PN532_HSU(HardwareSerial &serial)
 {
@@ -16,13 +18,20 @@ void PN532_HSU::begin()
 
 void PN532_HSU::wakeup()
 {
-    _serial->write(0x55);
-    _serial->write(0x55);
-    _serial->write(0);
-    _serial->write(0);
-    _serial->write(0);
+    for (uint8_t i = 0; i < sizeof(PN532_WAKEUP); i++) {
+        _serial->write(PN532_WAKEUP[i]);
+    }
+    
+    delay(100);
 
+    uint8_t wakeup_ack[15];
+    
+    if(receive(wakeup_ack, sizeof(wakeup_ack), PN532_HSU_READ_TIMEOUT)<=0){
+        DMSG("wakeup recv ack timeout");
+    }
+    
     /** dump serial buffer */
+    /*
     if(_serial->available()){
         DMSG("Dump serial buffer: ");
     }
@@ -30,7 +39,7 @@ void PN532_HSU::wakeup()
         uint8_t ret = _serial->read();
         DMSG_HEX(ret);
     }
-
+     */
 }
 
 int8_t PN532_HSU::writeCommand(const uint8_t *header, uint8_t hlen, const uint8_t *body, uint8_t blen)
